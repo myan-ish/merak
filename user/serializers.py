@@ -27,15 +27,11 @@ class UserSerializer(serializers.ModelSerializer):
             "avatar",
             "gender",
             "birth_date",
-            "website",
             "phone",
             "address",
             "whatsapp",
-            "pending_invite",
-            "is_superuser",
-            "is_admin",
-            "is_merchant",
             "is_staff",
+            "display_name",
         )
 
 class ChangePasswordSerializer(serializers.ModelSerializer):
