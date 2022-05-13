@@ -13,24 +13,87 @@ from drf_yasg.utils import swagger_auto_schema
 user_model = get_user_model()
 
 
+user_model = get_user_model()
+
+
+class VariantView(ModelViewSet):
+    class VariantInSerializer(serializers.Serializer):
+        name = serializers.CharField(max_length=255)
+        value = serializers.CharField(max_length=255)
+        price = serializers.IntegerField()
+        image = serializers.ImageField(required=False)
+
+        def create(self, validated_data):
+            name = validated_data.pop("name")
+            value = validated_data.pop("value")
+            varaint_field = VarientField.objects.create(name=name, value=value)
+
+            variant = Variant.objects.create(field=varaint_field, **validated_data)
+            return variant
+
+    class VairantOutSerializer(serializers.ModelSerializer):
+        field = serializers.CharField(source="field.name")
+        value = serializers.CharField(source="field.value")
+
+        class Meta:
+            model = Variant
+            fields = "__all__"
+
+    queryset = Variant.objects.all()
+    serializer_class = VairantOutSerializer
+    performer_serializer_class = VariantInSerializer
+
+    @swagger_auto_schema(
+        request_body=performer_serializer_class,
+        responses={201: serializer_class},
+    )
+    def create(self, request, *args, **kwargs):
+        serializer = self.performer_serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        variant = serializer.save()
+        return Response(self.serializer_class(variant).data)
+
+    @swagger_auto_schema(
+        request_body=performer_serializer_class,
+        responses={201: serializer_class},
+    )
+    def update(self, request, *args, **kwargs):
+        variant = self.get_object()
+        serializer = self.performer_serializer_class(variant, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(self.serializer_class(variant).data)
+
+
 class ProductView(ModelViewSet):
     class ProductInSerializer(serializers.Serializer):
         name = serializers.CharField(max_length=255)
         description = serializers.CharField(max_length=255, required=False)
-        variant = serializers.CharField(max_length=255, required=True)
-        value = serializers.CharField(max_length=255, required=True)
+        variant = serializers.ListField(required=True)
         quantity = serializers.IntegerField()
-        price = serializers.DecimalField(max_digits=10, decimal_places=2)
 
         def create(self, validated_data):
-            variant_field, created = VarientField.objects.get_or_create(
-                name=validated_data.pop("variant"),
-                value=validated_data.pop("value"),
-            )
-            variant = Variant.objects.create(
-                price=validated_data.pop("price"), field=variant_field
-            )
-            product = Product.objects.create(variant=variant, **validated_data)
+            user = None
+            request = self.context.get("request")
+            if request and hasattr(request, "user"):
+                user = request.user
+
+            # try:
+            #     variant_image = validated_data.pop("image")
+            # except KeyError:
+            #     variant_image = None
+
+            # variant_field, created = VarientField.objects.get_or_create(
+            #     name=validated_data.pop("variant"),
+            #     value=validated_data.pop("value"),
+            # )
+            # variant = Variant.objects.create(
+            #     price=validated_data.pop("price"), field=variant_field, image = variant_image,
+            # )
+            variant = validated_data.pop("variant")
+            product = Product.objects.create(owned_by=user, **validated_data)
+            product.variant.set(variant)
+            product.save()
             return product
 
         def update(self, instance, validated_data):
@@ -43,19 +106,16 @@ class ProductView(ModelViewSet):
             )
             validated_data["variant"] = variant
             instance.__dict__.update(validated_data)
+            instance.variant = variant
             instance.save()
             return instance
 
     class ProductOutSerializer(serializers.ModelSerializer):
-        variant = serializers.CharField(source="variant.field.name")
-        value = serializers.CharField(source="variant.field.value")
-        price = serializers.DecimalField(
-            source="variant.price", max_digits=10, decimal_places=2
-        )
+        variant = VariantView.VairantOutSerializer(many=True)
 
         class Meta:
             model = Product
-            fields = ("name", "description", "variant", "value", "quantity", "price")
+            fields = ("name", "description", "variant", "quantity")
 
     queryset = Product.objects.all()
     serializer_class = ProductOutSerializer
@@ -66,7 +126,11 @@ class ProductView(ModelViewSet):
         responses={201: serializer_class},
     )
     def create(self, request, *args, **kwargs):
-        serializer = self.performer_serializer_class(data=request.data)
+        """Create a new product,
+        The list in the variant field is list of variant pks."""
+        serializer = self.performer_serializer_class(
+            data=request.data, context={"request": request}
+        )
         serializer.is_valid(raise_exception=True)
         product = serializer.save()
         return Response(self.serializer_class(product).data, status=201)

@@ -1,11 +1,12 @@
 from django.urls import path, include
 from rest_framework import routers
 
-from inventory.views import AcceptOrderView, DeclineAcceptedOrderView, DeclineAssignedOrderView, OrderView, ProductView
+from inventory.views import AcceptOrderView, DeclineAcceptedOrderView, DeclineAssignedOrderView, OrderView, ProductView, VariantView
 
 router = routers.DefaultRouter()
 
 router.register('product',ProductView)
+router.register('variant',VariantView)
 router.register('order' ,OrderView)
 
 urlpatterns = [

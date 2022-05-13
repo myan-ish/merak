@@ -12,6 +12,7 @@ class VarientField(models.Model):
 class Variant(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2)
     field = models.ForeignKey(VarientField, on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='variant_images', blank=True)
 
     def __str__(self):
         return self.field.name if self.field else ''
@@ -20,7 +21,7 @@ class Variant(models.Model):
 class Product(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
-    variant = models.ForeignKey(Variant, on_delete=models.SET_NULL, blank=True, null=True)
+    variant = models.ManyToManyField(Variant, blank=True)
     quantity = models.PositiveIntegerField(default=0)
     uuid = models.CharField(max_length=255, blank=True, null=True,unique=True)
 
