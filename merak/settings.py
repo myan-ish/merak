@@ -193,3 +193,13 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Configure Django App for Heroku.
 import django_heroku
 django_heroku.settings(locals())
+
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        "apiKey": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header",
+            "authorizationUrl": "/user/auth/login/",
+        },
+}}
