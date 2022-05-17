@@ -11,7 +11,7 @@ class VarientField(models.Model):
 
 class Variant(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2)
-    field = models.ForeignKey(VarientField, on_delete=models.CASCADE)
+    field = models.ManyToManyField(VarientField)
     image = models.ImageField(upload_to='variant_images', blank=True)
 
     def __str__(self):

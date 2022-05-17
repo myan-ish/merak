@@ -1,6 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 from rest_framework import serializers
+from drf_writable_nested.serializers import WritableNestedModelSerializer
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
@@ -15,26 +16,23 @@ user_model = get_user_model()
 
 user_model = get_user_model()
 
+class FieldSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VarientField
+        fields = '__all__'
 
 class VariantView(ModelViewSet):
-    class VariantInSerializer(serializers.Serializer):
-        name = serializers.CharField(max_length=255)
-        value = serializers.CharField(max_length=255)
+    class VariantInSerializer(WritableNestedModelSerializer):
+        field = FieldSerializer(many=True)
         price = serializers.IntegerField()
         image = serializers.ImageField(required=False)
 
-        def create(self, validated_data):
-            name = validated_data.pop("name")
-            value = validated_data.pop("value")
-            varaint_field = VarientField.objects.create(name=name, value=value)
-
-            variant = Variant.objects.create(field=varaint_field, **validated_data)
-            return variant
+        class Meta:
+            model = Variant
+            fields = '__all__'
 
     class VairantOutSerializer(serializers.ModelSerializer):
-        field = serializers.CharField(source="field.name")
-        value = serializers.CharField(source="field.value")
-
+        field = FieldSerializer(many=True)
         class Meta:
             model = Variant
             fields = "__all__"

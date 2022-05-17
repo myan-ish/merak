@@ -11,7 +11,7 @@ class CustomProduct(admin.ModelAdmin):
 
 class CustomVariant(admin.ModelAdmin):
     model = Variant
-    list_display = ( 'field','price')
+    list_display = ( 'image','price')
 
 class CustomVarientField(admin.ModelAdmin):
     model = VarientField
