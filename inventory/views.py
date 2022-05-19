@@ -81,7 +81,7 @@ class ProductView(ModelViewSet):
 
         class Meta:
             model = Product
-            fields = ("uuid","name", "description", "variant", "quantity")
+            fields = ("uuid","name", "description", "variant")
 
     queryset = Product.objects.all()
     serializer_class = ProductOutSerializer
