@@ -7,37 +7,42 @@ class VarientField(models.Model):
     value = models.CharField(max_length=100)
     
     def __str__(self):
-        return self.name
+        return self.name+'-'+self.value
 
 class Variant(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2)
     field = models.ManyToManyField(VarientField)
+    product = models.ForeignKey('Product', on_delete=models.PROTECT, blank=True, null=True)
     image = models.ImageField(upload_to='variant_images', blank=True)
+    quantity = models.IntegerField(default=0)
+    sku = models.CharField(max_length=100, blank=True)
+    is_default = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=False)
 
     def __str__(self):
-        return self.field.name if self.field else ''
-
+        return self.sku if self.sku else ''
+    
+    def save(self, *args, **kwargs):
+        if not self.sku:
+            self.sku = self.product.name+ '-'
+            fields = [field.value for field in self.field.all()]
+            self.sku += '-'.join(map(str, fields))
+            
+        return super().save(*args, **kwargs)
 
 class Product(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
-    variant = models.ManyToManyField(Variant, blank=True)
-    quantity = models.PositiveIntegerField(default=0)
     uuid = models.CharField(max_length=255, blank=True, null=True,unique=True)
 
-    owned_by = models.ForeignKey(User, related_name='products', on_delete=models.CASCADE)
-
-    @property
-    def price(self):
-        return self.variant.price if self.variant else ''
-
-    @property
-    def is_active(self):
-        return self.quantity > 0
+    owned_by = models.ForeignKey(User, related_name='products', on_delete=models.PROTECT)
 
     def __str__(self):
-        return self.name
-    
+        if self.name:
+            return self.name
+        else:
+            return self.uuid
+
     def save(self, *args, **kwargs):
         # generate uuid
         if not self.uuid:
@@ -45,7 +50,7 @@ class Product(models.Model):
         super().save(*args, **kwargs)
 
 class OrderItem(models.Model):
-    product = models.ForeignKey(Product, on_delete=models.SET_NULL, blank=True, null=True)
+    product = models.ForeignKey(Variant, on_delete=models.SET_NULL, blank=True, null=True)
     quantity = models.IntegerField(default=0)
 
     @property
@@ -75,7 +80,7 @@ class Order(models.Model):
     )
 
     items = models.ManyToManyField(OrderItem)
-    owned_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    owned_by = models.ForeignKey(User, on_delete=models.PROTECT)
     ordered_by = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True, related_name='orders')
     assigned_to = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True, related_name='assigned_orders')
 

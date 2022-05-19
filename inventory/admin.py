@@ -6,12 +6,12 @@ from inventory.models import Order, OrderItem, Product, Variant, VarientField
 class CustomProduct(admin.ModelAdmin):
     model = Product
     readonly_fields = ('uuid',)
-    list_display = ('name', 'quantity', 'uuid')
+    list_display = ('name', 'uuid')
     list_filter = ('name', 'uuid')
 
 class CustomVariant(admin.ModelAdmin):
     model = Variant
-    list_display = ( 'image','price')
+    list_display = ('id','price')
 
 class CustomVarientField(admin.ModelAdmin):
     model = VarientField

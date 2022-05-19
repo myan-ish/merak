@@ -7,6 +7,7 @@ from django.contrib.auth import get_user_model
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
 from rest_framework.decorators import action
 from django.db.models import Q
+from inventory.filters import VariantFilter
 from inventory.models import Order, OrderItem, Product, Variant, VarientField
 
 from drf_yasg.utils import swagger_auto_schema
@@ -26,6 +27,8 @@ class VariantView(ModelViewSet):
         field = FieldSerializer(many=True)
         price = serializers.IntegerField()
         image = serializers.ImageField(required=False)
+        product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all())
+        is_default = serializers.BooleanField(required=False)
 
         class Meta:
             model = Variant
@@ -40,6 +43,8 @@ class VariantView(ModelViewSet):
     queryset = Variant.objects.all()
     serializer_class = VairantOutSerializer
     performer_serializer_class = VariantInSerializer
+    filterset_class = VariantFilter
+    lookup_field = 'sku'
 
     @swagger_auto_schema(
         request_body=performer_serializer_class,
@@ -64,60 +69,24 @@ class VariantView(ModelViewSet):
 
 
 class ProductView(ModelViewSet):
-    class ProductInSerializer(serializers.Serializer):
+    class ProductInSerializer(serializers.ModelSerializer):
         name = serializers.CharField(max_length=255)
         description = serializers.CharField(max_length=255, required=False)
-        variant = serializers.ListField(required=True)
-        quantity = serializers.IntegerField()
 
-        def create(self, validated_data):
-            user = None
-            request = self.context.get("request")
-            if request and hasattr(request, "user"):
-                user = request.user
-
-            # try:
-            #     variant_image = validated_data.pop("image")
-            # except KeyError:
-            #     variant_image = None
-
-            # variant_field, created = VarientField.objects.get_or_create(
-            #     name=validated_data.pop("variant"),
-            #     value=validated_data.pop("value"),
-            # )
-            # variant = Variant.objects.create(
-            #     price=validated_data.pop("price"), field=variant_field, image = variant_image,
-            # )
-            variant = validated_data.pop("variant")
-            product = Product.objects.create(owned_by=user, **validated_data)
-            product.variant.set(variant)
-            product.save()
-            return product
-
-        def update(self, instance, validated_data):
-            variant_field, created = VarientField.objects.get_or_create(
-                name=validated_data.pop("variant"),
-                value=validated_data.pop("value"),
-            )
-            variant = Variant.objects.create(
-                price=validated_data.pop("price"), field=variant_field
-            )
-            validated_data["variant"] = variant
-            instance.__dict__.update(validated_data)
-            instance.variant = variant
-            instance.save()
-            return instance
-
+        class Meta:
+            model = Product
+            fields = '__all__'
     class ProductOutSerializer(serializers.ModelSerializer):
         variant = VariantView.VairantOutSerializer(many=True)
 
         class Meta:
             model = Product
-            fields = ("name", "description", "variant", "quantity")
+            fields = ("uuid","name", "description", "variant", "quantity")
 
     queryset = Product.objects.all()
     serializer_class = ProductOutSerializer
     performer_serializer_class = ProductInSerializer
+    lookup_field = "uuid"
 
     @swagger_auto_schema(
         request_body=performer_serializer_class,
@@ -146,7 +115,7 @@ class ProductView(ModelViewSet):
         return Response(self.serializer_class(product).data, status=201)
 
 
-class ItemsSerializer(serializers.Serializer):
+class VariantSerializer(serializers.Serializer):
     product = serializers.IntegerField()
     quantity = serializers.IntegerField()
 
@@ -158,7 +127,7 @@ class ItemsRetriveSerializer(serializers.Serializer):
 
 class OrderView(ModelViewSet):
     class OrderInSerializer(serializers.Serializer):
-        items = serializers.ListField(child=ItemsSerializer())
+        items = serializers.ListField(child=VariantSerializer())
 
         ordered_by = serializers.IntegerField()
         assigned_to = serializers.IntegerField(required=False)
@@ -166,7 +135,7 @@ class OrderView(ModelViewSet):
         def create(self, validated_data):
             order_item_list = []
             for item in validated_data.pop("items"):
-                product = Product.objects.get(id=item["product"])
+                product = Variant.objects.get(sku=item["product"])
                 if product.quantity < item["quantity"]:
                     raise serializers.ValidationError(
                         "Not enough quantity for product {}".format(product.name)
