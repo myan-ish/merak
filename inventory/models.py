@@ -12,7 +12,7 @@ class VarientField(models.Model):
 class Variant(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2)
     field = models.ManyToManyField(VarientField)
-    product = models.ForeignKey('Product', on_delete=models.PROTECT, blank=True, null=True)
+    product = models.ForeignKey('Product', on_delete=models.SET_NULL, blank=True, null=True)
     image = models.ImageField(upload_to='variant_images', blank=True)
     quantity = models.IntegerField(default=0)
     sku = models.CharField(max_length=100, blank=True)
@@ -34,7 +34,7 @@ class Product(models.Model):
     description = models.TextField(blank=True, null=True)
     uuid = models.CharField(max_length=255, blank=True, null=True,unique=True)
 
-    owned_by = models.ForeignKey(User, related_name='products', on_delete=models.PROTECT)
+    owned_by = models.ForeignKey(User, related_name='products', on_delete=models.SET_NULL, blank=True, null=True)
 
     def __str__(self):
         if self.name:
@@ -100,7 +100,7 @@ class Order(models.Model):
     )
 
     items = models.ManyToManyField(OrderItem)
-    owned_by = models.ForeignKey(User, on_delete=models.PROTECT)
+    owned_by = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True)
     ordered_by = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True, related_name='orders')
     assigned_to = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True, related_name='assigned_orders')
 
