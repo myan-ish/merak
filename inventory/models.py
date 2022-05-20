@@ -22,13 +22,12 @@ class Variant(models.Model):
     def __str__(self):
         return self.sku if self.sku else ''
     
-    def save(self, *args, **kwargs):
-        if not self.sku:
-            self.sku = self.product.name+ '-'
-            fields = [field.value for field in self.field.all()]
-            self.sku += '-'.join(map(str, fields))
-            
-        return super().save(*args, **kwargs)
+    def set_sku(self):
+        self.sku = self.product.name+ '-'
+        fields = [field.value for field in self.field.all()]
+        self.sku += '-'.join(map(str, fields))
+        self.save()
+    
 
 class Product(models.Model):
     name = models.CharField(max_length=255)
@@ -42,6 +41,27 @@ class Product(models.Model):
             return self.name
         else:
             return self.uuid
+    
+    @property
+    def default_image(self):
+        variants = self.variant_set.all()
+        for variant in variants:
+            if variant.is_default:
+                try:
+                    return variant.image.url
+                except ValueError:
+                    return None
+        return None
+    
+    @property
+    def default_price(self):
+        variants = self.variant_set.all()
+        for variant in variants:
+            if variant.is_default:
+                try:
+                    return variant.price
+                except ValueError:
+                    return None
 
     def save(self, *args, **kwargs):
         # generate uuid

@@ -27,7 +27,7 @@ class VariantView(ModelViewSet):
         field = FieldSerializer(many=True)
         price = serializers.IntegerField()
         image = serializers.ImageField(required=False)
-        product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all())
+        product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all(),)
         is_default = serializers.BooleanField(required=False)
 
         class Meta:
@@ -54,6 +54,7 @@ class VariantView(ModelViewSet):
         serializer = self.performer_serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
         variant = serializer.save()
+        variant.set_sku()
         return Response(self.serializer_class(variant).data)
 
     @swagger_auto_schema(
@@ -72,16 +73,26 @@ class ProductView(ModelViewSet):
     class ProductInSerializer(serializers.ModelSerializer):
         name = serializers.CharField(max_length=255)
         description = serializers.CharField(max_length=255, required=False)
-
+        owned_by = serializers.PrimaryKeyRelatedField(queryset=user_model.objects.all(), required=False)
         class Meta:
             model = Product
             fields = '__all__'
+        
+        def create(self, validated_data):
+            user = None
+            request = self.context.get("request")
+            if request and hasattr(request, "user"):
+                user = request.user
+
+            product = Product.objects.create(owned_by=user, **validated_data)
+            product.save()
+            return product
     class ProductOutSerializer(serializers.ModelSerializer):
-        variant = VariantView.VairantOutSerializer(many=True)
 
         class Meta:
             model = Product
-            fields = ("uuid","name", "description", "variant")
+            fields = ("uuid","name", "description", "default_image", "default_price", "id")
+        
 
     queryset = Product.objects.all()
     serializer_class = ProductOutSerializer
