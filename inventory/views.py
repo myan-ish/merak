@@ -132,8 +132,21 @@ class VariantSerializer(serializers.Serializer):
 
 
 class ItemsRetriveSerializer(serializers.Serializer):
-    product = ProductView.ProductOutSerializer()
+    product = VariantView.VairantOutSerializer()
     quantity = serializers.IntegerField()
+    line_total = serializers.SerializerMethodField()
+
+    def get_line_total(self, obj):
+        return obj.product.price * obj.quantity
+
+class UserOutSerializer(serializers.ModelSerializer):
+    full_name = serializers.SerializerMethodField()
+    class Meta:
+        model = user_model
+        fields = ("email", "address", "phone", "full_name")
+    
+    def get_full_name(self, obj):
+        return obj.get_full_name()
 
 
 class OrderView(ModelViewSet):
@@ -204,14 +217,26 @@ class OrderView(ModelViewSet):
             return instance
 
     class OrderOutSerializer(serializers.ModelSerializer):
-        ordered_by = serializers.CharField(source="ordered_by.email", read_only=True)
-        assigned_to = serializers.CharField(source="assigned_to.email", read_only=True)
-        # status = serializers.CharField(source="status")
+        ordered_by = UserOutSerializer(read_only=True)
+        assigned_to = UserOutSerializer(read_only=True)
         items = ItemsRetriveSerializer(many=True)
-        # uuid = serializers.CharField(source="uuid")
-        # ordered_date = serializers.DateTimeField(source="ordered_date")
-        # completed_date = serializers.DateTimeField(source="completed_date")
+        invoice = serializers.CharField(source="uuid")
+        sub_total = serializers.SerializerMethodField()
+        total = serializers.SerializerMethodField()
 
+
+        # Need refactoring--------------------------------------------------
+        def get_sub_total(self, obj):
+            sub_total = 0
+            for item in obj.items.all():
+                sub_total += item.product.price * item.quantity
+            return float(sub_total)
+        
+        # Need refactoring--------------------------------------------------
+        def get_total(self, obj):
+            tax = 1.13
+            return self.get_sub_total(obj) * tax
+            
         class Meta:
             model = Order
             fields = (
@@ -219,9 +244,11 @@ class OrderView(ModelViewSet):
                 "assigned_to",
                 "status",
                 "items",
-                "uuid",
+                "invoice",
                 "ordered_date",
                 "completed_date",
+                "sub_total",
+                "total",
             )
 
     queryset = Order.objects.all()

@@ -5,12 +5,12 @@ from inventory.models import Variant
 
 
 class VariantFilter(filters.FilterSet):
-    sku = filters.CharFilter(field_name='sku', lookup_expr='icontains')
     sku = filters.CharFilter(method='sku_filter')
+    product = filters.CharFilter(method='get_variant_of_product')
 
     class Meta:
         model = Variant
-        fields = ["sku"]
+        fields = ["sku", "product"]
     
     def sku_filter(self, queryset, name, value):
         combinations = []
@@ -33,3 +33,6 @@ class VariantFilter(filters.FilterSet):
             qs = Q(sku__icontains=word)
             q |= qs
         return queryset.filter(q)
+    
+    def get_variant_of_product(self, queryset, name, value):
+        return queryset.filter(product__uuid=value)

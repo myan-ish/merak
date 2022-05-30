@@ -62,4 +62,7 @@ class User(AbstractBaseUser, SafeDeleteModel, PermissionsMixin):
     def undelete(self, *args, **kwargs):
         self.status = User.UserStatusChoice.ACTIVE
         super().undelete(*args, **kwargs)
+    
+    def get_full_name(self):
+        return f"{self.first_name} {self.last_name}"
 
