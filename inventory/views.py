@@ -1,3 +1,4 @@
+import base64
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 from rest_framework import serializers
@@ -22,17 +23,33 @@ class FieldSerializer(serializers.ModelSerializer):
         model = VarientField
         fields = '__all__'
 
+class VariantFieldView(ModelViewSet):
+    serializer_class = FieldSerializer
+    queryset = VarientField.objects.all()
+
+
 class VariantView(ModelViewSet):
     class VariantInSerializer(WritableNestedModelSerializer):
-        field = FieldSerializer(many=True)
+        field = serializers.ListField()
         price = serializers.IntegerField()
         image = serializers.ImageField(required=False)
+        # image = serializers.CharField(required=False)
         product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all(),)
         is_default = serializers.BooleanField(required=False)
 
         class Meta:
             model = Variant
             fields = '__all__'
+        
+        def create(self, validated_data):
+            field = validated_data.pop('field')
+            
+            variant = Variant.objects.create(**validated_data)
+            variant.set_sku()
+            field_obj = [VarientField.objects.get(id=field_id) for field_id in field]
+            variant.field.set(field_obj)
+            variant.save()
+            return variant
 
     class VairantOutSerializer(serializers.ModelSerializer):
         field = FieldSerializer(many=True)
@@ -51,6 +68,10 @@ class VariantView(ModelViewSet):
         responses={201: serializer_class},
     )
     def create(self, request, *args, **kwargs):
+        # image_data = request.data.pop('image').encode()
+        # with open("imageToSave.jpg", "wb") as image:
+        #     image.write(base64.decodebytes(image_data))
+        # request.data['image'] = "imageToSave.jpg"
         serializer = self.performer_serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
         variant = serializer.save()
@@ -83,7 +104,6 @@ class ProductView(ModelViewSet):
             request = self.context.get("request")
             if request and hasattr(request, "user"):
                 user = request.user
-
             product = Product.objects.create(owned_by=user, **validated_data)
             product.save()
             return product
@@ -262,6 +282,8 @@ class OrderView(ModelViewSet):
         responses={201: serializer_class},
     )
     def create(self, request, *args, **kwargs):
+        field = request.data.get('field')
+        print(field)
         serializer = self.perfomer_serializer_class(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         order = serializer.save()
