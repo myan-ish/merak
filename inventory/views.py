@@ -127,7 +127,7 @@ class ProductView(ModelViewSet):
 
 
 class VariantSerializer(serializers.Serializer):
-    product = serializers.IntegerField()
+    product = serializers.CharField()
     quantity = serializers.IntegerField()
 
 
@@ -162,7 +162,7 @@ class OrderView(ModelViewSet):
                 product = Variant.objects.get(sku=item["product"])
                 if product.quantity < item["quantity"]:
                     raise serializers.ValidationError(
-                        "Not enough quantity for product {}".format(product.name)
+                        "Not enough quantity for product {}".format(product.product.name)
                     )
                 product.quantity -= item["quantity"]
                 product.save()
@@ -185,7 +185,7 @@ class OrderView(ModelViewSet):
             except user_model.DoesNotExist:
                 raise serializers.ValidationError("User does not exist")
             order = Order.objects.create(
-                ordered_by=ordered_by, assigned_to=assigned_to, **validated_data
+                owned_by=self.context['request'].user ,ordered_by=ordered_by, assigned_to=assigned_to, **validated_data
             )
             order.items.set(order_item_list)
             return order
@@ -262,7 +262,7 @@ class OrderView(ModelViewSet):
         responses={201: serializer_class},
     )
     def create(self, request, *args, **kwargs):
-        serializer = self.perfomer_serializer_class(data=request.data)
+        serializer = self.perfomer_serializer_class(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         order = serializer.save()
         return Response(self.serializer_class(order).data, status=201)
