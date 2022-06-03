@@ -70,7 +70,7 @@ class Product(models.Model):
         super().save(*args, **kwargs)
 
 class OrderItem(models.Model):
-    product = models.ForeignKey(Variant, on_delete=models.SET_NULL, blank=True, null=True)
+    product = models.ForeignKey(Variant, on_delete=models.PROTECT, blank=True, null=True)
     quantity = models.IntegerField(default=0)
 
     @property
@@ -127,6 +127,10 @@ class Order(models.Model):
 
     def __str__(self):
         return self.ordered_by.email if self.assigned_to else ''
+    
+    def delete(self):
+        self.status = Status.CANCELLED
+        self.save()
     
     def save(self, *args, **kwargs):
         # generate uuid
