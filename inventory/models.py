@@ -78,7 +78,9 @@ class OrderItem(models.Model):
         return self.product.price
 
     def __str__(self):
-        return self.product.name if self.product else self.id
+        if self.product:
+            return self.product.product.name if self.product.product else str(self.id)
+        return str(self.id)
     
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
