@@ -17,19 +17,6 @@ class UserViewSet(viewsets.ModelViewSet):
     http_method_names = ("get", "put", "patch", "head", "options", "trace")
     filterset_class = UserFilter
 
-    def get_queryset(self):
-        user = self.request.user
-        filter_params = {}
-
-        if not user.is_superuser:
-            filter_params["is_superuser"] = False
-        if not user.is_admin:
-            filter_params["is_admin"] = False
-        if not user.is_merchant:
-            filter_params["is_merchant"] = False
-
-        return User.objects.filter(**filter_params).distinct()
-
     def get_serializer_class(self):
         if self.action == "change_password":
             return ChangePasswordSerializer
