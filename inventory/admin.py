@@ -1,7 +1,14 @@
 from pyexpat import model
 from django.contrib import admin
 
-from inventory.models import Order, OrderItem, Product, Variant, VarientField
+from inventory.models import (
+    Order,
+    OrderItem,
+    Product,
+    Variant,
+    VarientField,
+    VariantFieldName,
+)
 
 
 class CustomProduct(admin.ModelAdmin):
@@ -33,3 +40,4 @@ admin.site.register(Variant, CustomVariant)
 admin.site.register(VarientField, CustomVarientField)
 admin.site.register(Order, CustomOrder)
 admin.site.register(OrderItem)
+admin.site.register(VariantFieldName)

@@ -36,7 +36,7 @@ class FieldSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         variant_field_name = VariantFieldName.objects.get_or_create(
-            name=validated_data["field_name"]
+            name=validated_data.pop("field_name")
         )[0]
         validated_data["name"] = variant_field_name
         return super().create(validated_data)

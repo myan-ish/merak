@@ -32,7 +32,6 @@ class UserSerializer(serializers.ModelSerializer):
             "birth_date",
             "phone",
             "address",
-            "whatsapp",
             "is_staff",
             "display_name",
         )
