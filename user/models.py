@@ -10,6 +10,27 @@ from user.managers import CustomAccountManager
 def get_upload_path_for_avatar(instance, filename):
     return f"avatars/users/{instance.id}/{filename}"
 
+class Organization(SafeDeleteModel):
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    owner = models.ForeignKey('user.User', on_delete=models.CASCADE, related_name='organizations')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+class Team(SafeDeleteModel):
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    team_leader = models.ForeignKey('user.User', on_delete=models.SET_NULL, related_name="team_leader",null=True,blank=True)
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
 class GenderChoices(models.TextChoices):
     MALE = "MALE", _("Male")
     FEMALE = "FEMALE", _("Female")
@@ -28,8 +49,10 @@ class User(AbstractBaseUser, SafeDeleteModel, PermissionsMixin):
     )
     birth_date = models.DateField(null=True)
     phone = models.CharField(max_length=20, null=True, blank=True)
-    address = models.JSONField(null=True, blank=True)
-    whatsapp = models.CharField(max_length=15, null=True, blank=True)
+    address = models.CharField(null=True, blank=True, max_length=100)
+
+    team = models.ForeignKey(Team, on_delete=models.SET_NULL, null=True, blank=True)
+    organization = models.ForeignKey(Organization, on_delete=models.SET_NULL, null=True, blank=True)
 
     is_staff = models.BooleanField(default=False)
 

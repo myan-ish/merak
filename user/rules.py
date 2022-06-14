@@ -5,4 +5,4 @@ User = get_user_model()
 
 
 def user_authentication_rule(user: User):
-    return user and (user.status == "Active" or user.status == "Pending")
+    return user and (user.status == "Active")

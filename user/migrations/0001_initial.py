@@ -28,7 +28,7 @@ class Migration(migrations.Migration):
                 ('gender', models.CharField(choices=[('MALE', 'Male'), ('FEMALE', 'Female'), ('OTHER', 'Other'), ('UNKNOWN', 'Unknown')], max_length=7, null=True)),
                 ('birth_date', models.DateField(null=True)),
                 ('phone', models.CharField(blank=True, max_length=20, null=True)),
-                ('address', models.JSONField(blank=True, null=True)),
+                ('address', models.CharField(blank=True, max_length=100, null=True)),
                 ('whatsapp', models.CharField(blank=True, max_length=15, null=True)),
                 ('is_admin', models.BooleanField(default=False)),
                 ('is_merchant', models.BooleanField(default=False)),

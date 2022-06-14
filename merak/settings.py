@@ -136,7 +136,7 @@ USE_TZ = True
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.IsAuthenticated",
-        # "src.custom_acl.permissions.CustomACL",
+        "user.permissions.UserEmailVerified",
     ),
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",

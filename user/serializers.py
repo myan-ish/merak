@@ -6,9 +6,12 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
+from user.models import Organization, Team
+
 from .validators import validate_password
 
 User = get_user_model()
+
 
 class UserSerializer(serializers.ModelSerializer):
     display_name = serializers.SerializerMethodField()
@@ -16,7 +19,7 @@ class UserSerializer(serializers.ModelSerializer):
     @staticmethod
     def get_display_name(obj):
         return f"{obj.first_name} {obj.last_name}"
-    
+
     class Meta:
         model = User
         fields = (
@@ -33,6 +36,7 @@ class UserSerializer(serializers.ModelSerializer):
             "is_staff",
             "display_name",
         )
+
 
 class ChangePasswordSerializer(serializers.ModelSerializer):
     old_password = serializers.CharField(write_only=True)
@@ -55,9 +59,7 @@ class ChangePasswordSerializer(serializers.ModelSerializer):
         try:
             password_validation.validate_password(password=new_password)
         except password_validation.ValidationError as e:
-            raise serializers.ValidationError(
-                {"new_password": list(e.messages)}
-            )
+            raise serializers.ValidationError({"new_password": list(e.messages)})
 
         return data
 
@@ -66,20 +68,20 @@ class ChangePasswordSerializer(serializers.ModelSerializer):
         instance.save(update_fields=("password",))
         return instance
 
+
 class AuthSerializer(serializers.Serializer):
     access_token = serializers.CharField(
         max_length=4096, required=True, trim_whitespace=True
     )
 
+
 class RegistrationSerializer(serializers.ModelSerializer):
-    first_name = serializers.CharField(max_length = 64)
+    first_name = serializers.CharField(max_length=64)
     last_name = serializers.CharField(max_length=64)
     email = serializers.EmailField(
-        validators = [UniqueValidator(queryset=User.objects.all())]
+        validators=[UniqueValidator(queryset=User.objects.all())]
     )
-    password = serializers.CharField(
-        write_only=True, validators=[validate_password]
-    )
+    password = serializers.CharField(write_only=True, validators=[validate_password])
 
     class Meta:
         model = User
@@ -99,3 +101,65 @@ class RegistrationSerializer(serializers.ModelSerializer):
             status=User.UserStatusChoice.PENDING,
         )
         return user
+
+
+class OrganizationRegistrationSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(max_length=64)
+    description = serializers.CharField(max_length=256)
+
+    class Meta:
+        model = Organization
+        fields = (
+            "name",
+            "description",
+        )
+
+    def create(self, validated_data: dict) -> dict:
+        user = None
+        request = self.context.get("request")
+        if request and hasattr(request, "user"):
+            user = request.user
+        organization = Organization.objects.create(
+            name=validated_data["name"],
+            description=validated_data["description"],
+            owner=user,
+        )
+        return organization
+
+
+class TeamRegistrationSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(max_length=64)
+    description = serializers.CharField(max_length=256)
+    team_leader = serializers.IntegerField(write_only=True)
+    organization = serializers.IntegerField(write_only=True)
+    members = serializers.ListField()
+
+    class Meta:
+        model = Team
+        fields = (
+            "name",
+            "description",
+            "team_leader",
+            "organization",
+            "members",
+        )
+
+    def create(self, validated_data: dict) -> dict:
+
+        team = Team.objects.create(
+            name=validated_data["name"],
+            description=validated_data["description"],
+            team_leader=User.objects.get(id=validated_data["team_leader"]),
+            organization=Organization.objects.get(id=validated_data["organization"]),
+        )
+
+        for member in validated_data["members"]:
+            member_obj = User.objects.get(id=member)
+            if member_obj.organization != team.organization:
+                raise serializers.ValidationError(
+                    {"members": _("User is not in the same organization")}
+                )
+            member_obj.team = team
+            member_obj.save()
+
+        return team

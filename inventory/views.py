@@ -9,7 +9,14 @@ from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticate
 from rest_framework.decorators import action
 from django.db.models import Q
 from inventory.filters import VariantFilter
-from inventory.models import Order, OrderItem, Product, Variant, VarientField
+from inventory.models import (
+    Order,
+    OrderItem,
+    Product,
+    Variant,
+    VariantFieldName,
+    VarientField,
+)
 
 from drf_yasg.utils import swagger_auto_schema
 
@@ -18,10 +25,25 @@ user_model = get_user_model()
 
 user_model = get_user_model()
 
+
 class FieldSerializer(serializers.ModelSerializer):
+    field_name = serializers.CharField(write_only=True)
+    name = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = VarientField
-        fields = '__all__'
+        fields = "__all__"
+
+    def create(self, validated_data):
+        variant_field_name = VariantFieldName.objects.get_or_create(
+            name=validated_data["field_name"]
+        )[0]
+        validated_data["name"] = variant_field_name
+        return super().create(validated_data)
+
+    def get_name(self, obj):
+        return obj.name.name
+
 
 class VariantFieldView(ModelViewSet):
     serializer_class = FieldSerializer
@@ -34,16 +56,18 @@ class VariantView(ModelViewSet):
         price = serializers.IntegerField()
         image = serializers.ImageField(required=False)
         # image = serializers.CharField(required=False)
-        product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all(),)
+        product = serializers.PrimaryKeyRelatedField(
+            queryset=Product.objects.all(),
+        )
         is_default = serializers.BooleanField(required=False)
 
         class Meta:
             model = Variant
-            fields = '__all__'
-        
+            fields = "__all__"
+
         def create(self, validated_data):
-            field = validated_data.pop('field')
-            
+            field = validated_data.pop("field")
+
             variant = Variant.objects.create(**validated_data)
             variant.set_sku()
             field_obj = [VarientField.objects.get(id=field_id) for field_id in field]
@@ -53,6 +77,7 @@ class VariantView(ModelViewSet):
 
     class VairantOutSerializer(serializers.ModelSerializer):
         field = FieldSerializer(many=True)
+
         class Meta:
             model = Variant
             fields = "__all__"
@@ -61,7 +86,7 @@ class VariantView(ModelViewSet):
     serializer_class = VairantOutSerializer
     performer_serializer_class = VariantInSerializer
     filterset_class = VariantFilter
-    lookup_field = 'sku'
+    lookup_field = "sku"
 
     @swagger_auto_schema(
         request_body=performer_serializer_class,
@@ -94,11 +119,14 @@ class ProductView(ModelViewSet):
     class ProductInSerializer(serializers.ModelSerializer):
         name = serializers.CharField(max_length=255)
         description = serializers.CharField(max_length=255, required=False)
-        owned_by = serializers.PrimaryKeyRelatedField(queryset=user_model.objects.all(), required=False)
+        owned_by = serializers.PrimaryKeyRelatedField(
+            queryset=user_model.objects.all(), required=False
+        )
+
         class Meta:
             model = Product
-            fields = '__all__'
-        
+            fields = "__all__"
+
         def create(self, validated_data):
             user = None
             request = self.context.get("request")
@@ -107,12 +135,18 @@ class ProductView(ModelViewSet):
             product = Product.objects.create(owned_by=user, **validated_data)
             product.save()
             return product
-    class ProductOutSerializer(serializers.ModelSerializer):
 
+    class ProductOutSerializer(serializers.ModelSerializer):
         class Meta:
             model = Product
-            fields = ("uuid","name", "description", "default_image", "default_price", "id")
-        
+            fields = (
+                "uuid",
+                "name",
+                "description",
+                "default_image",
+                "default_price",
+                "id",
+            )
 
     queryset = Product.objects.all()
     serializer_class = ProductOutSerializer
@@ -159,12 +193,14 @@ class ItemsRetriveSerializer(serializers.Serializer):
     def get_line_total(self, obj):
         return obj.product.price * obj.quantity
 
+
 class UserOutSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
+
     class Meta:
         model = user_model
         fields = ("email", "address", "phone", "full_name")
-    
+
     def get_full_name(self, obj):
         return obj.get_full_name()
 
@@ -182,7 +218,9 @@ class OrderView(ModelViewSet):
                 product = Variant.objects.get(sku=item["product"])
                 if product.quantity < item["quantity"]:
                     raise serializers.ValidationError(
-                        "Not enough quantity for product {}".format(product.product.name)
+                        "Not enough quantity for product {}".format(
+                            product.product.name
+                        )
                     )
                 product.quantity -= item["quantity"]
                 product.save()
@@ -205,7 +243,10 @@ class OrderView(ModelViewSet):
             except user_model.DoesNotExist:
                 raise serializers.ValidationError("User does not exist")
             order = Order.objects.create(
-                owned_by=self.context['request'].user ,ordered_by=ordered_by, assigned_to=assigned_to, **validated_data
+                owned_by=self.context["request"].user,
+                ordered_by=ordered_by,
+                assigned_to=assigned_to,
+                **validated_data
             )
             order.items.set(order_item_list)
             return order
@@ -244,19 +285,18 @@ class OrderView(ModelViewSet):
         sub_total = serializers.SerializerMethodField()
         total = serializers.SerializerMethodField()
 
-
         # Need refactoring--------------------------------------------------
         def get_sub_total(self, obj):
             sub_total = 0
             for item in obj.items.all():
                 sub_total += item.product.price * item.quantity
             return float(sub_total)
-        
+
         # Need refactoring--------------------------------------------------
         def get_total(self, obj):
             tax = 1.13
             return self.get_sub_total(obj) * tax
-            
+
         class Meta:
             model = Order
             fields = (
@@ -282,9 +322,11 @@ class OrderView(ModelViewSet):
         responses={201: serializer_class},
     )
     def create(self, request, *args, **kwargs):
-        field = request.data.get('field')
+        field = request.data.get("field")
         print(field)
-        serializer = self.perfomer_serializer_class(data=request.data, context={"request": request})
+        serializer = self.perfomer_serializer_class(
+            data=request.data, context={"request": request}
+        )
         serializer.is_valid(raise_exception=True)
         order = serializer.save()
         return Response(self.serializer_class(order).data, status=201)
