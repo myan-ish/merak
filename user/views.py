@@ -19,6 +19,7 @@ from cryptography.fernet import InvalidToken
 
 User = get_user_model()
 
+
 class UserViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
     queryset = User.objects.all()
@@ -36,7 +37,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
         if request.FILES.get("avatar") is not None:
             data["avatar"] = request.FILES["avatar"]
-        instance = self.get_object()
+        instance = request.user
         serializer = self.get_serializer(instance, data=data, partial=partial)
         serializer.is_valid(raise_exception=True)
 
@@ -57,23 +58,28 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer.save()
         return Response()
 
+
 class GetUserProfile(APIView):
     def get(self, request):
         user = request.user
         serializer = UserSerializer(user)
         return Response(serializer.data)
 
+
 class ActivateEmail(APIView):
     permission_classes = (AllowAny,)
-    def get(self, request,token, *args, **kwargs):
-        user_id = decrypt_string(token,settings.INVITES_KEY)['id']
+
+    def get(self, request, token, *args, **kwargs):
+        user_id = decrypt_string(token, settings.INVITES_KEY)["id"]
         user = User.objects.get(id=user_id)
         user.status = User.UserStatusChoice.ACTIVE
         user.save()
         return Response({"data": "Success"})
 
+
 class SendPasswordResetEmail(APIView):
     permission_classes = (AllowAny,)
+
     def post(self, request, *args, **kwargs):
         email = request.data.get("email")
         try:
@@ -83,16 +89,18 @@ class SendPasswordResetEmail(APIView):
         send_password_reset_email(user)
         return Response({"message": "Reset Password Email Sent"})
 
+
 class VerifyResetPasswordEmail(APIView):
     permission_classes = (AllowAny,)
-    def post(self, request,token, *args, **kwargs):
+
+    def post(self, request, token, *args, **kwargs):
         new_password = request.data.get("new_password")
         confirm_password = request.data.get("confirm_password")
         try:
-            user_email = decrypt_string(token,settings.INVITES_KEY)['email']
+            user_email = decrypt_string(token, settings.INVITES_KEY)["email"]
         except InvalidToken:
             return Response({"message": "Invalid Token"}, status=404)
-        if new_password ==None or confirm_password == None:
+        if new_password == None or confirm_password == None:
             return Response({"message": "Invalid Password"}, status=404)
         if new_password != confirm_password:
             raise exceptions.AuthenticationFailed("Password not matched")
@@ -102,8 +110,8 @@ class VerifyResetPasswordEmail(APIView):
         user.save()
         return Response({"message": "Password reset successful."})
 
+
 class ChangePassword(APIView):
-    
     def post(self, request, *args, **kwargs):
         password = request.data.get("password")
         new_password = request.data.get("new_password")
