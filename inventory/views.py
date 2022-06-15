@@ -199,7 +199,7 @@ class UserOutSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = user_model
-        fields = ("email", "address", "phone", "full_name")
+        fields = ("pk", "email", "address", "phone", "full_name")
 
     def get_full_name(self, obj):
         return obj.get_full_name()
@@ -255,7 +255,7 @@ class OrderView(ModelViewSet):
             order_item_list = []
             try:
                 for item in validated_data.pop("items"):
-                    product = Product.objects.get(id=item["product"])
+                    product = Variant.objects.get(id=item["product"])
                     product.quantity -= item["quantity"]
                     product.save()
                     order_item = OrderItem.objects.create(
