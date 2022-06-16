@@ -131,19 +131,6 @@ class ChangePassword(APIView):
         return Response({"message": "Password changed successfully"})
 
 
-class SetTeamUUID(APIView):
-    def post(self, request, *args, **kwargs):
-        team_uuid = request.data.get("team_uuid")
-        user = request.user
-        try:
-            team = Team.objects.get(uuid=team_uuid)
-        except Team.DoesNotExist:
-            return Response({"message": "Team not found"}, status=404)
-        user.team_uuid = team_uuid
-        user.save()
-        return Response({"message": "Team UUID set successfully"})
-
-
 class OrganizationViewSet(viewsets.ModelViewSet):
     serializer_class = OrganizationRegistrationSerializer
     queryset = Organization.objects.all()
@@ -155,8 +142,17 @@ class OrganizationViewSet(viewsets.ModelViewSet):
         except Organization.DoesNotExist:
             return Response({"message": "Organization not found"}, status=404)
 
+    def create(self, request, *args, **kwargs):
+        if Organization.objects.filter(owner=request.user).exists():
+            return Response(
+                {"message": "You cannot create two organizations"}, status=400
+            )
+        return super().create(request, *args, **kwargs)
+
     def post(self, request, *args, **kwargs):
         with transaction.atomic():
+
+            print("here")
             serializer = self.get_serializer(
                 data=request.data, context={"request": request}
             )

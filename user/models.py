@@ -28,7 +28,10 @@ class Organization(SafeDeleteModel):
     def save(self, keep_deleted=False, **kwargs):
         if not self.uuid:
             self.uuid = str(uuid.uuid4())[:6]
-            while Team.objects.filter(uuid=self.uuid).exists():
+            while (
+                Team.objects.filter(uuid=self.uuid).exists()
+                or Organization.objects.filter(uuid=self.uuid).exists()
+            ):
                 self.uuid = str(uuid.uuid4())[:6]
         return super().save(keep_deleted, **kwargs)
 
@@ -54,7 +57,11 @@ class Team(SafeDeleteModel):
     def save(self, keep_deleted=False, **kwargs):
         if not self.uuid:
             self.uuid = str(uuid.uuid4())[:6]
-            while Team.objects.filter(uuid=self.uuid).exists():
+            while (
+                Team.objects.filter(uuid=self.uuid).exists()
+                or Organization.objects.filter(uuid=self.uuid).exists()
+            ):
+                self.uuid = str(uuid.uuid4())[:6]
                 self.uuid = str(uuid.uuid4())[:6]
         return super().save(keep_deleted, **kwargs)
 

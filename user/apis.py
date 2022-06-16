@@ -36,3 +36,25 @@ class RegistrationView(generics.CreateAPIView):
                 {"access_token": str(RefreshToken.for_user(user).access_token)},
                 status=201,
             )
+
+
+class InviteFromUUID(APIView):
+    def post(self, request, *args, **kwargs):
+        uuid = request.data.get("uuid")
+        user = request.user
+
+        team = Team.objects.filter(uuid=uuid)
+        if team.exists():
+            team = team.first()
+            user.team = team
+            user.organization = team.organization
+        else:
+            organization = Organization.objects.filter(uuid=uuid)
+            if organization.exists():
+                print("here")
+                user.organization = organization.first()
+            else:
+                return Response({"message": "UUID not valid"}, status=404)
+
+        user.save()
+        return Response({"message": "Success"}, status=201)

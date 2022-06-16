@@ -32,6 +32,7 @@ auth_urlpatterns = [
         name="verify_reset_password",
     ),
     path("change_password/", views.ChangePassword.as_view(), name="change_password"),
+    path("invite_from_uuid/", apis.InviteFromUUID.as_view(), name="invite_from_uuid"),
 ]
 
 urlpatterns = [
