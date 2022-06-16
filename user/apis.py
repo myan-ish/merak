@@ -9,13 +9,13 @@ from rest_framework.views import APIView
 
 from user.models import Organization, Team
 
-from .serializers import (
+from user.serializer import (
     OrganizationRegistrationSerializer,
     RegistrationSerializer,
     AuthSerializer,
     TeamRegistrationSerializer,
 )
-from user import serializers
+from user import serializer
 from rest_framework.serializers import ModelSerializer, SerializerMethodField, CharField
 
 User = get_user_model()
@@ -34,52 +34,5 @@ class RegistrationView(generics.CreateAPIView):
 
             return Response(
                 {"access_token": str(RefreshToken.for_user(user).access_token)},
-                status=201,
-            )
-
-
-class OrganizationRegistrationView(generics.CreateAPIView):
-    model = Organization
-    serializer_class = OrganizationRegistrationSerializer
-
-    def post(self, request, *args, **kwargs):
-        with transaction.atomic():
-            serializer = self.get_serializer(
-                data=request.data, context={"request": request}
-            )
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-
-            return Response(
-                serializer.data,
-                status=201,
-            )
-
-
-class TeamRegistrationView(generics.CreateAPIView):
-    model = Team
-    serializer_class = TeamRegistrationSerializer
-
-    class TeamSerializer(ModelSerializer):
-        team_leader = SerializerMethodField()
-        organization = CharField(source="organization.name")
-
-        class Meta:
-            model = Team
-            fields = ("id", "name", "organization", "team_leader")
-
-        def get_team_leader(self, obj):
-            return obj.team_leader.get_full_name()
-
-    def post(self, request, *args, **kwargs):
-        with transaction.atomic():
-            serializer = self.get_serializer(
-                data=request.data, context={"request": request}
-            )
-            serializer.is_valid(raise_exception=True)
-            team = serializer.save()
-
-            return Response(
-                self.TeamSerializer(team).data,
                 status=201,
             )

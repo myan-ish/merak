@@ -1,21 +1,27 @@
 import json
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.db import transaction
 
 from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
+from rest_framework.serializers import ModelSerializer, SerializerMethodField, CharField
 from rest_framework import exceptions
 
 from user.utils import decrypt_string, send_password_reset_email
-from user.models import User
-from .serializers import UserSerializer, ChangePasswordSerializer
+from user.models import Organization, Team, User
+from user.serializer import (
+    OrganizationRegistrationSerializer,
+    TeamRegistrationSerializer,
+    UserSerializer,
+    ChangePasswordSerializer,
+)
 from .filters import UserFilter
-from user import serializers
+from user import serializer
 from cryptography.fernet import InvalidToken
-
 
 User = get_user_model()
 
@@ -124,3 +130,63 @@ class ChangePassword(APIView):
         user.set_password(new_password)
         user.save()
         return Response({"message": "Password changed successfully"})
+
+
+class SetTeamUUID(APIView):
+    def post(self, request, *args, **kwargs):
+        team_uuid = request.data.get("team_uuid")
+        user = request.user
+        try:
+            team = Team.objects.get(uuid=team_uuid)
+        except Team.DoesNotExist:
+            return Response({"message": "Team not found"}, status=404)
+        user.team_uuid = team_uuid
+        user.save()
+        return Response({"message": "Team UUID set successfully"})
+
+
+class OrganizationViewSet(viewsets.ModelViewSet):
+    model = Organization
+    serializer_class = OrganizationRegistrationSerializer
+
+    def post(self, request, *args, **kwargs):
+        with transaction.atomic():
+            serializer = self.get_serializer(
+                data=request.data, context={"request": request}
+            )
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+
+            return Response(
+                serializer.data,
+                status=201,
+            )
+
+
+class TeamRegistrationViewSet(viewsets.ModelViewSet):
+    model = Team
+    serializer_class = TeamRegistrationSerializer
+
+    class TeamSerializer(ModelSerializer):
+        team_leader = SerializerMethodField()
+        organization = CharField(source="organization.name")
+
+        class Meta:
+            model = Team
+            fields = ("id", "name", "organization", "team_leader")
+
+        def get_team_leader(self, obj):
+            return obj.team_leader.get_full_name()
+
+    def post(self, request, *args, **kwargs):
+        with transaction.atomic():
+            serializer = self.get_serializer(
+                data=request.data, context={"request": request}
+            )
+            serializer.is_valid(raise_exception=True)
+            team = serializer.save()
+
+            return Response(
+                self.TeamSerializer(team).data,
+                status=201,
+            )
