@@ -20,7 +20,6 @@ from user.serializer import (
     ChangePasswordSerializer,
 )
 from .filters import UserFilter
-from user import serializer
 from cryptography.fernet import InvalidToken
 
 User = get_user_model()
@@ -146,8 +145,15 @@ class SetTeamUUID(APIView):
 
 
 class OrganizationViewSet(viewsets.ModelViewSet):
-    model = Organization
     serializer_class = OrganizationRegistrationSerializer
+    queryset = Organization.objects.all()
+
+    def get_queryset(self):
+        try:
+            organization = Organization.objects.filter(owner=self.request.user)
+            return organization
+        except Organization.DoesNotExist:
+            return Response({"message": "Organization not found"}, status=404)
 
     def post(self, request, *args, **kwargs):
         with transaction.atomic():
@@ -164,9 +170,6 @@ class OrganizationViewSet(viewsets.ModelViewSet):
 
 
 class TeamRegistrationViewSet(viewsets.ModelViewSet):
-    model = Team
-    serializer_class = TeamRegistrationSerializer
-
     class TeamSerializer(ModelSerializer):
         team_leader = SerializerMethodField()
         organization = CharField(source="organization.name")
@@ -177,6 +180,26 @@ class TeamRegistrationViewSet(viewsets.ModelViewSet):
 
         def get_team_leader(self, obj):
             return obj.team_leader.get_full_name()
+
+    serializer_class = TeamSerializer
+    performer_class = TeamRegistrationSerializer
+    queryset = Team.objects.all()
+
+    def get_queryset(self):
+        try:
+            organization = Organization.objects.get(owner=self.request.user)
+        except Organization.DoesNotExist:
+            return Response({"message": "Organization not found"}, status=404)
+        teams = Team.objects.filter(organization=organization)
+        return teams
+
+    def create(self, request, *args, **kwargs):
+        self.serializer_class = self.performer_class
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        self.serializer_class = self.performer_class
+        return super().update(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
         with transaction.atomic():

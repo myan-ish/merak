@@ -9,9 +9,9 @@ from user import apis
 
 
 router = SimpleRouter()
-router.register("", views.UserViewSet)
-router.register("team", views.TeamRegistrationViewSet, basename="team")
-router.register("organization", views.OrganizationViewSet, basename="organization")
+router.register("profile", views.UserViewSet)
+router.register("team", views.TeamRegistrationViewSet)
+router.register("organization", views.OrganizationViewSet)
 
 auth_urlpatterns = [
     path("login/", TokenObtainPairView.as_view(), name="token_obtain_pair"),

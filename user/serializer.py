@@ -131,7 +131,7 @@ class TeamRegistrationSerializer(serializers.ModelSerializer):
     description = serializers.CharField(max_length=256)
     team_leader = serializers.IntegerField(write_only=True)
     organization = serializers.IntegerField(write_only=True)
-    members = serializers.ListField()
+    members = serializers.ListField(write_only = True)
 
     class Meta:
         model = Team
