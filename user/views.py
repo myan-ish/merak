@@ -172,7 +172,7 @@ class TeamRegistrationViewSet(viewsets.ModelViewSet):
 
         class Meta:
             model = Team
-            fields = ("id", "name", "organization", "team_leader")
+            fields = ("id", "name", "organization", "team_leader", "uuid")
 
         def get_team_leader(self, obj):
             return obj.team_leader.get_full_name()

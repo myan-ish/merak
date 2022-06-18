@@ -105,12 +105,14 @@ class RegistrationSerializer(serializers.ModelSerializer):
 class OrganizationRegistrationSerializer(serializers.ModelSerializer):
     name = serializers.CharField(max_length=64)
     description = serializers.CharField(max_length=256)
+    uuid = serializers.CharField(read_only=True)
 
     class Meta:
         model = Organization
         fields = (
             "name",
             "description",
+            "uuid",
         )
 
     def create(self, validated_data: dict) -> dict:
@@ -131,7 +133,7 @@ class TeamRegistrationSerializer(serializers.ModelSerializer):
     description = serializers.CharField(max_length=256)
     team_leader = serializers.IntegerField(write_only=True)
     organization = serializers.IntegerField(write_only=True)
-    members = serializers.ListField(write_only = True)
+    members = serializers.ListField(write_only=True)
 
     class Meta:
         model = Team
