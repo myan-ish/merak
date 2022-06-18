@@ -106,6 +106,7 @@ class OrganizationRegistrationSerializer(serializers.ModelSerializer):
     name = serializers.CharField(max_length=64)
     description = serializers.CharField(max_length=256)
     uuid = serializers.CharField(read_only=True)
+    id = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Organization
@@ -113,6 +114,7 @@ class OrganizationRegistrationSerializer(serializers.ModelSerializer):
             "name",
             "description",
             "uuid",
+            "id",
         )
 
     def create(self, validated_data: dict) -> dict:
