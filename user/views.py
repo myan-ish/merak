@@ -10,10 +10,12 @@ from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 from rest_framework.serializers import ModelSerializer, SerializerMethodField, CharField
 from rest_framework import exceptions
+from user.permissions import UserIsOwner
 
 from user.utils import decrypt_string, send_password_reset_email
-from user.models import Organization, Team, User
+from user.models import Customer, Organization, Team, User
 from user.serializer import (
+    CustomerSerializer,
     OrganizationRegistrationSerializer,
     TeamRegistrationSerializer,
     UserSerializer,

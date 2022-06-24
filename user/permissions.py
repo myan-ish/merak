@@ -23,4 +23,7 @@ class UserIsOwner(BasePermission):
             return False
 
     def has_object_permission(self, request, view, obj):
-        return request.user.id == obj.user.organization.owner.id
+        try:
+            return request.user.id == obj.user.organization.owner.id
+        except AttributeError:
+            return request.user.organization == obj.organization

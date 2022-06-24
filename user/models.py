@@ -140,3 +140,16 @@ class Attendance(models.Model):
 
     def __str__(self):
         return f"{self.user.email} - {self.date}"
+
+
+class Customer(models.Model):
+    name = models.CharField(max_length=100)
+    phone = models.CharField(max_length=20, null=True, blank=True)
+    address = models.CharField(null=True, blank=True, max_length=100)
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
+
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.name

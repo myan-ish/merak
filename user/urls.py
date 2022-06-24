@@ -37,6 +37,7 @@ auth_urlpatterns = [
 
 api_router = SimpleRouter()
 api_router.register("attendance", apis.AttendanceViewSet)
+api_router.register("customer", apis.CustomerViewSet)
 
 api_urlpatterns = [
     path("punch_in/", apis.PunchInView.as_view(), name="punch_in"),

@@ -9,10 +9,11 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import viewsets
 from rest_framework.views import APIView
 
-from user.models import Attendance, Organization, Team
+from user.models import Attendance, Customer, Organization, Team
 from user.permissions import UserIsOwner
 
 from user.serializer import (
+    CustomerSerializer,
     OrganizationRegistrationSerializer,
     RegistrationSerializer,
     AuthSerializer,
@@ -108,3 +109,14 @@ class AttendanceViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
+
+
+class CustomerViewSet(viewsets.ModelViewSet):
+    serializer_class = CustomerSerializer
+    queryset = Customer.objects.all()
+    permission_classes = (UserIsOwner,)
+
+    def get_queryset(self):
+        return (
+            super().get_queryset().filter(organization=self.request.user.organization)
+        )
