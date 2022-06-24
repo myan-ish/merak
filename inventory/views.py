@@ -396,7 +396,7 @@ class GetUserPendingOrderView(APIView):
 
     def get(self, request):
         try:
-            order = Order.objects.get(
+            orders = Order.objects.filter(
                 assigned_to=request.user,
                 status="PENDING",
                 owned_by__in=[request.user.admin, request.user],
@@ -404,14 +404,14 @@ class GetUserPendingOrderView(APIView):
         except Order.DoesNotExist:
             return Response(data={"detail": "Order doesn't exists."}, status=404)
 
-        return Response(OrderView.OrderOutSerializer(order).data)
+        return Response(OrderView.OrderOutSerializer(orders, many=True).data)
 
 class GetUserAcceptedOrderView(APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request):
         try:
-            order = Order.objects.get(
+            orders = Order.objects.filter(
                 assigned_to=request.user,
                 status="ACCEPTED",
                 owned_by__in=[request.user.admin, request.user],
@@ -419,7 +419,7 @@ class GetUserAcceptedOrderView(APIView):
         except Order.DoesNotExist:
             return Response(data={"detail": "Order doesn't exists."}, status=404)
 
-        return Response(OrderView.OrderOutSerializer(order).data)
+        return Response(OrderView.OrderOutSerializer(orders, many=True).data)
 
 class DeclineAcceptedOrderView(APIView):
     lookup_url = "uuid"
