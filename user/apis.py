@@ -1,3 +1,4 @@
+from datetime import date, time, datetime
 from django.contrib.auth import get_user_model
 from django.db import transaction
 
@@ -5,9 +6,11 @@ from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework import viewsets
 from rest_framework.views import APIView
 
-from user.models import Organization, Team
+from user.models import Attendance, Organization, Team
+from user.permissions import UserIsOwner
 
 from user.serializer import (
     OrganizationRegistrationSerializer,
@@ -58,3 +61,50 @@ class InviteFromUUID(APIView):
 
         user.save()
         return Response({"message": "Success"}, status=201)
+
+
+class PunchInView(APIView):
+    def get(self, request):
+        user = request.user
+        attendance_object = Attendance.objects.create(user=user, date=date.today())
+        attendance_object.punch_in_time = datetime.now().strftime("%H:%M:%S")
+        attendance_object.save()
+
+        return Response({"message": "Success"}, status=201)
+
+
+class PunchOutView(APIView):
+    def get(self, request):
+        user = request.user
+        attendance_object = Attendance.objects.filter(
+            user=user, date=date.today()
+        ).last()
+        attendance_object.punch_in_time = datetime.now().strftime("%H:%M:%S")
+        attendance_object.save()
+        return Response({"message": "Success"}, status=201)
+
+
+class AttendanceViewSet(viewsets.ModelViewSet):
+    model = Attendance
+    serializer_class = serializer.AttendanceSerializer
+    permission_classes = (UserIsOwner,)
+    queryset = Attendance.objects.all()
+
+    def get_queryset(self):
+        tema_members = Organization.objects.get(owner=self.request.user).user_set.all()
+        return Attendance.objects.filter(user__in=tema_members)
+
+    def create(self, request, *args, **kwargs):
+        user_id = request.data.get("user")
+        if not user_id:
+            return Response({"message": "User id is required"}, status=400)
+
+        queryset = self.filter_queryset(self.get_queryset().filter(user__id=user_id))
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)

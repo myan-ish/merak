@@ -8,7 +8,7 @@ from django.contrib.auth import get_user_model
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
 from rest_framework.decorators import action
 from django.db.models import Q
-from inventory.filters import VariantFilter
+from inventory.filters import OrderFilter, VariantFilter
 from inventory.models import (
     Order,
     OrderItem,
@@ -316,6 +316,7 @@ class OrderView(ModelViewSet):
     perfomer_serializer_class = OrderInSerializer
     lookup_field = "uuid"
     permission_classes = (IsAuthenticated,)
+    filterset_class = OrderFilter
 
     @swagger_auto_schema(
         request_body=perfomer_serializer_class,
@@ -390,6 +391,35 @@ class DeclineAssignedOrderView(APIView):
         order.save()
         return Response(OrderView.OrderOutSerializer(order).data)
 
+class GetUserPendingOrderView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        try:
+            order = Order.objects.get(
+                assigned_to=request.user,
+                status="PENDING",
+                owned_by__in=[request.user.admin, request.user],
+            )
+        except Order.DoesNotExist:
+            return Response(data={"detail": "Order doesn't exists."}, status=404)
+
+        return Response(OrderView.OrderOutSerializer(order).data)
+
+class GetUserAcceptedOrderView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        try:
+            order = Order.objects.get(
+                assigned_to=request.user,
+                status="ACCEPTED",
+                owned_by__in=[request.user.admin, request.user],
+            )
+        except Order.DoesNotExist:
+            return Response(data={"detail": "Order doesn't exists."}, status=404)
+
+        return Response(OrderView.OrderOutSerializer(order).data)
 
 class DeclineAcceptedOrderView(APIView):
     lookup_url = "uuid"

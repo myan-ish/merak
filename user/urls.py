@@ -35,7 +35,17 @@ auth_urlpatterns = [
     path("invite_from_uuid/", apis.InviteFromUUID.as_view(), name="invite_from_uuid"),
 ]
 
+api_router = SimpleRouter()
+api_router.register("attendance", apis.AttendanceViewSet)
+
+api_urlpatterns = [
+    path("punch_in/", apis.PunchInView.as_view(), name="punch_in"),
+    path("punch_out/", apis.PunchOutView.as_view(), name="punch_out"),
+    path("", include(api_router.urls)),
+]
+
 urlpatterns = [
     path("auth/", include(auth_urlpatterns)),
+    path("api/", include(api_urlpatterns)),
     path("", include(router.urls)),
 ]

@@ -130,3 +130,13 @@ class User(AbstractBaseUser, SafeDeleteModel, PermissionsMixin):
 
     def get_full_name(self):
         return f"{self.first_name} {self.last_name}"
+
+
+class Attendance(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    punch_in_time = models.TimeField(null=True, blank=True)
+    punch_out_time = models.TimeField(null=True, blank=True)
+    date = models.DateField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.user.email} - {self.date}"

@@ -27,7 +27,7 @@
 
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import Organization, Team, User
+from .models import Attendance, Organization, Team, User
 from .forms import CustomUserCreationForm, CustomUserChangeForm
 
 from django import forms
@@ -118,3 +118,4 @@ admin.site.register(User, CustomUserAdmin)
 
 admin.site.register(Organization)
 admin.site.register(Team)
+admin.site.register(Attendance)
