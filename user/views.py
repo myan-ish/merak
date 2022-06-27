@@ -33,6 +33,9 @@ class UserViewSet(viewsets.ModelViewSet):
     http_method_names = ("get", "put", "patch", "head", "options", "trace")
     filterset_class = UserFilter
 
+    def get_queryset(self):
+        return self.queryset.filter(organization=self.request.user.organization)
+
     def get_serializer_class(self):
         if self.action == "change_password":
             return ChangePasswordSerializer
