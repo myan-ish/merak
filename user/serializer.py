@@ -127,6 +127,8 @@ class OrganizationRegistrationSerializer(serializers.ModelSerializer):
             description=validated_data["description"],
             owner=user,
         )
+        user.organization = organization
+        user.save(update_fields=("organization",))
         return organization
 
 
