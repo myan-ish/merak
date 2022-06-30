@@ -178,7 +178,7 @@ class Order(models.Model):
         return sum([order.total for order in self.get_total_orders()])
 
     def __str__(self):
-        return self.ordered_by.email if self.assigned_to else ""
+        return self.assigned_to.email if self.assigned_to else ""
 
     def delete(self):
         self.status = Status.CANCELLED
