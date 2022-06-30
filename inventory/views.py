@@ -20,8 +20,7 @@ from inventory.models import (
 
 from drf_yasg.utils import swagger_auto_schema
 
-user_model = get_user_model()
-
+from user.models import Customer
 
 user_model = get_user_model()
 
@@ -39,6 +38,14 @@ class FieldSerializer(serializers.ModelSerializer):
             name=validated_data.pop("field_name")
         )[0]
         validated_data["name"] = variant_field_name
+
+        user = None
+        request = self.context.get("request")
+        if request and hasattr(request, "user"):
+            user = request.user
+
+        validated_data["organization"] = user.organization if user else None
+
         return super().create(validated_data)
 
     def get_name(self, obj):
@@ -48,6 +55,11 @@ class FieldSerializer(serializers.ModelSerializer):
 class VariantFieldView(ModelViewSet):
     serializer_class = FieldSerializer
     queryset = VarientField.objects.all()
+
+    def get_queryset(self):
+        return (
+            super().get_queryset().filter(organization=self.request.user.organization)
+        )
 
 
 class VariantView(ModelViewSet):
@@ -67,8 +79,13 @@ class VariantView(ModelViewSet):
 
         def create(self, validated_data):
             field = validated_data.pop("field")
-
-            variant = Variant.objects.create(**validated_data)
+            user = None
+            request = self.context.get("request")
+            if request and hasattr(request, "user"):
+                user = request.user
+            variant = Variant.objects.create(
+                **validated_data, organization=user.organization
+            )
             variant.set_sku()
             field_obj = [VarientField.objects.get(id=field_id) for field_id in field]
             variant.field.set(field_obj)
@@ -88,16 +105,19 @@ class VariantView(ModelViewSet):
     filterset_class = VariantFilter
     lookup_field = "sku"
 
+    def get_queryset(self):
+        return (
+            super().get_queryset().filter(organization=self.request.user.organization)
+        )
+
     @swagger_auto_schema(
         request_body=performer_serializer_class,
         responses={201: serializer_class},
     )
     def create(self, request, *args, **kwargs):
-        # image_data = request.data.pop('image').encode()
-        # with open("imageToSave.jpg", "wb") as image:
-        #     image.write(base64.decodebytes(image_data))
-        # request.data['image'] = "imageToSave.jpg"
-        serializer = self.performer_serializer_class(data=request.data)
+        serializer = self.performer_serializer_class(
+            data=request.data, context={"request": request}
+        )
         serializer.is_valid(raise_exception=True)
         variant = serializer.save()
         variant.set_sku()
@@ -132,7 +152,9 @@ class ProductView(ModelViewSet):
             request = self.context.get("request")
             if request and hasattr(request, "user"):
                 user = request.user
-            product = Product.objects.create(owned_by=user, **validated_data)
+            product = Product.objects.create(
+                owned_by=user, organization=user.organization, **validated_data
+            )
             product.save()
             return product
 
@@ -152,6 +174,11 @@ class ProductView(ModelViewSet):
     serializer_class = ProductOutSerializer
     performer_serializer_class = ProductInSerializer
     lookup_field = "uuid"
+
+    def get_queryset(self):
+        return (
+            super().get_queryset().filter(organization=self.request.user.organization)
+        )
 
     @swagger_auto_schema(
         request_body=performer_serializer_class,
@@ -205,6 +232,17 @@ class UserOutSerializer(serializers.ModelSerializer):
         return obj.get_full_name()
 
 
+class CustomerOutSerializer(serializers.ModelSerializer):
+    full_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Customer
+        fields = "__all__"
+
+    def get_full_name(self, obj):
+        return obj.get_full_name()
+
+
 class OrderView(ModelViewSet):
     class OrderInSerializer(serializers.Serializer):
         items = serializers.ListField(child=VariantSerializer())
@@ -215,7 +253,16 @@ class OrderView(ModelViewSet):
         def create(self, validated_data):
             order_item_list = []
             for item in validated_data.pop("items"):
-                product = Variant.objects.get(sku=item["product"])
+                try:
+                    product = Variant.objects.get(
+                        sku=item["product"],
+                        organization=self.context["request"].user.organization,
+                    )
+                except Variant.DoesNotExist:
+                    raise serializers.ValidationError(
+                        "Product with sku {} does not exist".format(item["product"])
+                    )
+
                 if product.quantity < item["quantity"]:
                     raise serializers.ValidationError(
                         "Not enough quantity for product {}".format(
@@ -226,17 +273,23 @@ class OrderView(ModelViewSet):
                 product.save()
 
                 order_item = OrderItem.objects.create(
-                    product=product, quantity=item["quantity"]
+                    product=product,
+                    quantity=item["quantity"],
+                    organization=product.organization,
                 )
 
                 order_item_list.append(order_item)
             try:
-                ordered_by = user_model.objects.get(id=validated_data.pop("ordered_by"))
+                ordered_by = Customer.objects.get(
+                    id=validated_data.pop("ordered_by"),
+                    organization=self.context["request"].user.organization,
+                )
             except user_model.DoesNotExist:
                 raise serializers.ValidationError("User does not exist")
             try:
                 assigned_to = user_model.objects.get(
-                    id=validated_data.pop("assigned_to")
+                    id=validated_data.pop("assigned_to"),
+                    organization=ordered_by.organization,
                 )
             except KeyError:
                 assigned_to = None
@@ -244,6 +297,7 @@ class OrderView(ModelViewSet):
                 raise serializers.ValidationError("User does not exist")
             order = Order.objects.create(
                 owned_by=self.context["request"].user,
+                organization=self.context["request"].user.organization,
                 ordered_by=ordered_by,
                 assigned_to=assigned_to,
                 **validated_data
@@ -318,6 +372,11 @@ class OrderView(ModelViewSet):
     permission_classes = (IsAuthenticated,)
     filterset_class = OrderFilter
 
+    def get_queryset(self):
+        return (
+            super().get_queryset().filter(organization=self.request.user.organization)
+        )
+
     @swagger_auto_schema(
         request_body=perfomer_serializer_class,
         responses={201: serializer_class},
@@ -351,6 +410,7 @@ class OrderView(ModelViewSet):
 
 
 class AcceptOrderView(APIView):
+
     lookup_url = "uuid"
     permission_classes = (IsAuthenticated,)
 
@@ -391,6 +451,7 @@ class DeclineAssignedOrderView(APIView):
         order.save()
         return Response(OrderView.OrderOutSerializer(order).data)
 
+
 class GetUserPendingOrderView(APIView):
     permission_classes = (IsAuthenticated,)
 
@@ -406,6 +467,7 @@ class GetUserPendingOrderView(APIView):
 
         return Response(OrderView.OrderOutSerializer(orders, many=True).data)
 
+
 class GetUserAcceptedOrderView(APIView):
     permission_classes = (IsAuthenticated,)
 
@@ -420,6 +482,7 @@ class GetUserAcceptedOrderView(APIView):
             return Response(data={"detail": "Order doesn't exists."}, status=404)
 
         return Response(OrderView.OrderOutSerializer(orders, many=True).data)
+
 
 class DeclineAcceptedOrderView(APIView):
     lookup_url = "uuid"

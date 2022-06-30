@@ -1,6 +1,6 @@
 import uuid
 from django.db import models
-from user.models import User
+from user.models import Customer, User
 
 
 class VariantFieldName(models.Model):
@@ -15,6 +15,10 @@ class VarientField(models.Model):
         VariantFieldName, null=True, blank=True, on_delete=models.CASCADE
     )
     value = models.CharField(max_length=100)
+
+    organization = models.ForeignKey(
+        "user.Organization", on_delete=models.CASCADE, null=True, blank=True
+    )
 
     def __str__(self):
         return self.name.name + "-" + self.value
@@ -31,6 +35,10 @@ class Variant(models.Model):
     sku = models.CharField(max_length=100, blank=True)
     is_default = models.BooleanField(default=False)
     is_active = models.BooleanField(default=False)
+
+    organization = models.ForeignKey(
+        "user.Organization", on_delete=models.CASCADE, null=True, blank=True
+    )
 
     def __str__(self):
         return self.sku if self.sku else str(self.id)
@@ -51,6 +59,9 @@ class Product(models.Model):
 
     owned_by = models.ForeignKey(
         User, related_name="products", on_delete=models.SET_NULL, blank=True, null=True
+    )
+    organization = models.ForeignKey(
+        "user.Organization", on_delete=models.CASCADE, null=True, blank=True
     )
 
     def __str__(self):
@@ -93,6 +104,10 @@ class OrderItem(models.Model):
     )
     quantity = models.IntegerField(default=0)
 
+    organization = models.ForeignKey(
+        "user.Organization", on_delete=models.CASCADE, null=True, blank=True
+    )
+
     @property
     def price(self):
         return self.product.price
@@ -126,7 +141,11 @@ class Order(models.Model):
     items = models.ManyToManyField(OrderItem)
     owned_by = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True)
     ordered_by = models.ForeignKey(
-        User, on_delete=models.SET_NULL, blank=True, null=True, related_name="orders"
+        Customer,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name="orders",
     )
     assigned_to = models.ForeignKey(
         User,
@@ -134,6 +153,9 @@ class Order(models.Model):
         blank=True,
         null=True,
         related_name="assigned_orders",
+    )
+    organization = models.ForeignKey(
+        "user.Organization", on_delete=models.CASCADE, null=True, blank=True
     )
 
     ordered_date = models.DateTimeField(auto_now_add=True)
