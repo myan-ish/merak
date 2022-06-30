@@ -233,14 +233,9 @@ class UserOutSerializer(serializers.ModelSerializer):
 
 
 class CustomerOutSerializer(serializers.ModelSerializer):
-    full_name = serializers.SerializerMethodField()
-
     class Meta:
         model = Customer
         fields = "__all__"
-
-    def get_full_name(self, obj):
-        return obj.get_full_name()
 
 
 class OrderView(ModelViewSet):
@@ -332,7 +327,7 @@ class OrderView(ModelViewSet):
             return instance
 
     class OrderOutSerializer(serializers.ModelSerializer):
-        ordered_by = UserOutSerializer(read_only=True)
+        ordered_by = CustomerOutSerializer(read_only=True)
         assigned_to = UserOutSerializer(read_only=True)
         items = ItemsRetriveSerializer(many=True)
         invoice = serializers.CharField(source="uuid")
