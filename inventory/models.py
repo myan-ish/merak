@@ -50,7 +50,11 @@ class Variant(models.Model):
         while Variant.objects.filter(sku=self.sku).exists():
             self.sku += str(uuid.uuid4())[:5]
         self.save()
-
+    
+    # def save(self, *args, **kwargs):
+    #     super().save(*args, **kwargs)
+    #     if not self.sku:
+    #         self.set_sku()
 
 class Product(models.Model):
     name = models.CharField(max_length=255)

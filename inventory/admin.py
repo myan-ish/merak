@@ -1,4 +1,5 @@
 from pyexpat import model
+import uuid
 from django.contrib import admin
 
 from inventory.models import (
@@ -22,7 +23,11 @@ class CustomVariant(admin.ModelAdmin):
     model = Variant
     list_display = ("__str__", "price")
 
-
+    def save_related(self, request, form,formsets, change) -> None:
+        super().save_related(request, form, formsets, change)
+        form.instance.set_sku()
+        return super().save_related(request, form, formsets, change)
+        
 class CustomVarientField(admin.ModelAdmin):
     model = VarientField
     list_display = ("name", "value")
