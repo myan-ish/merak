@@ -13,7 +13,7 @@ class ExpenseViewSet(ModelViewSet):
         return self.queryset.filter(organization=self.request.user.organization)
 
 
-class ExpesnseCategoryViewSet(ModelViewSet):
+class ExpenseCategoryViewSet(ModelViewSet):
     serializer_class = ExpenseCategorySerializer
     queryset = ExpenseCategory.objects.all()
 
