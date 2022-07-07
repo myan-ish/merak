@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     # Internal Apps
     "inventory",
     "user",
+    "audit",
     # Third-party apps
     "rest_framework",
     "drf_yasg",
