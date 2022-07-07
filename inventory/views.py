@@ -369,7 +369,10 @@ class OrderView(ModelViewSet):
 
     def get_queryset(self):
         return (
-            super().get_queryset().filter(organization=self.request.user.organization)
+            super()
+            .get_queryset()
+            .filter(organization=self.request.user.organization)
+            .order_by("-ordered_date")
         )
 
     @swagger_auto_schema(
@@ -378,7 +381,6 @@ class OrderView(ModelViewSet):
     )
     def create(self, request, *args, **kwargs):
         field = request.data.get("field")
-        print(field)
         serializer = self.perfomer_serializer_class(
             data=request.data, context={"request": request}
         )
