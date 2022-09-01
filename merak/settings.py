@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 from datetime import timedelta
 import os
 from pathlib import Path
+import logging.config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -51,6 +52,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "drf_yasg",
     "django_filters",
+    'django_celery_results',
 ]
 
 MIDDLEWARE = [
@@ -209,11 +211,6 @@ if not DEBUG:  # Tell Django to copy statics to the `staticfiles` directory
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# Configure Django App for Heroku.
-import django_heroku
-
-django_heroku.settings(locals())
-
 SWAGGER_SETTINGS = {
     "SECURITY_DEFINITIONS": {
         "apiKey": {
@@ -224,3 +221,54 @@ SWAGGER_SETTINGS = {
         },
     }
 }
+
+# celery
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379'
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_BACKEND = 'django-db'
+CELERY_CACHE_BACKEND = 'django-cache'
+
+# ----------------------------------------------EMAIL SETTINGS------------------------------------------------------
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp-relay.sendinblue.com"
+EMAIL_USE_TLS = False
+EMAIL_PORT = 587
+EMAIL_HOST_USER = "ranaxmond@gmail.com"
+EMAIL_HOST_PASSWORD = "2DwcIZk4avSth9MA"
+
+# ----------------------------------------------Loggin SETTINGS------------------------------------------------------
+LOGGING_CONFIG = None # This empties out Django's logging config
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': True,
+    'formatters': {
+        'simple': {
+            'format': '%(levelname)s %(message)s',
+             'datefmt': '%y %b %d, %H:%M:%S',
+            },
+        },
+    'handlers': {
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple'
+        },
+        'celery': {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': 'celery.log',
+            'formatter': 'simple',
+            'maxBytes': 1024 * 1024 * 100,  # 100 mb
+        },
+    },
+    'loggers': {
+        'celery': {
+            'handlers': ['celery', 'console'],
+            'level': 'DEBUG',
+        },
+    }
+}
+logging.config.dictConfig(LOGGING) # Finally replace our config in python logging

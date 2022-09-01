@@ -96,7 +96,7 @@ class SendPasswordResetEmail(APIView):
             user = User.objects.get(email=email)
         except User.DoesNotExist:
             return Response({"message": "Email not valid."}, status=404)
-        send_password_reset_email(user)
+        send_password_reset_email.delay(user.email)
         return Response({"message": "Reset Password Email Sent"})
 
 
