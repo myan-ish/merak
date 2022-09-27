@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from audit.models import Expense, ExpenseCategory
+from audit.models import Expense, ExpenseCategory,Entry, Ledger
 
 admin.site.register(ExpenseCategory)
 
@@ -19,3 +19,5 @@ class ExpenseAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Expense, ExpenseAdmin)
+admin.site.register(Entry)
+admin.site.register(Ledger)
