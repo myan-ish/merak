@@ -1,6 +1,18 @@
 version: "3.8"
    
 services:
+    redis:
+        image: "redis:alpine"
+    db:
+        image: postgres
+        volumes:
+        - var/lib/postgresql/data
+        env_file: .env
+        environment:
+            - POSTGRES_DB=${DB_NAME}
+            - POSTGRES_USER=${DB_USERNAME}
+            - POSTGRES_PASSWORD=${DB_PASSWORD}
+        container_name: postgres_databse
     django:
         build: .
         container_name: django
@@ -13,19 +25,27 @@ services:
             - DEBUG=1
             - DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]
             - CELERY_BROKER=redis://redis:6379/0
+            - SECRET_KEY=${SECRET_KEY}
+            - EMAIL_HOST_USER=${EMAIL_HOST_USER}
+            - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
+            - POSTGRES_DB=postgres
+            - POSTGRES_USER=${DB_USERNAME}
+            - POSTGRES_PASSWORD=${DB_PASSWORD}
+
         depends_on:
-            - redis
+        - redis
+        - db
     celery:
         build: .
         command: celery -A merak worker -l INFO
         volumes:
             - .:/usr/src/app
+        env_file: .env
         environment:
             - DEBUG=1
             - DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]
             - CELERY_BROKER=redis://redis:6379/0
         depends_on:
             - django
-            - redis 
-    redis:
-        image: "redis:alpine"
+            - redis
+    

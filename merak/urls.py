@@ -37,4 +37,5 @@ urlpatterns = [
     path("inventory/", include("inventory.urls")),
     path("user/", include("user.urls")),
     path("audit/", include("audit.urls")),
+    path("tracking/", include("tracking.urls")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

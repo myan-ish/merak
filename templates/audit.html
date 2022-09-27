@@ -1,0 +1,25 @@
+<html>
+<body>
+{%for item in ledger%}
+
+    {%for entry in item.entries.all%}
+        {% comment %} {
+            "date": "{{entry.date}}",
+            "description": "{{entry.description}}",
+            "amount": "{{entry.amount}}",
+            "balance": "{{entry.balance}}"
+        } {% endcomment %}
+
+        {%if entry.is_credit%}
+            credit
+        {%else%}
+            debit
+        {%endif%}
+          {{entry.closing_balance}}
+            {{entry.date}}
+        <p>
+    {%endfor%}
+{%endfor%}
+
+</body>
+</html>
