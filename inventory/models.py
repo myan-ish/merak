@@ -1,3 +1,4 @@
+from email.policy import default
 import uuid
 from django.db import models
 from user.models import Customer, User
@@ -35,6 +36,7 @@ class Variant(models.Model):
     sku = models.CharField(max_length=100, blank=True)
     is_default = models.BooleanField(default=False)
     is_active = models.BooleanField(default=False)
+    taxable = models.BooleanField(default=True)
 
     organization = models.ForeignKey(
         "user.Organization", on_delete=models.CASCADE, null=True, blank=True
