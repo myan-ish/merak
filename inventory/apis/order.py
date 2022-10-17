@@ -19,6 +19,9 @@ class OrderByActionView(APIView):
     lookup_field = "uuid"
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(
+        responses={200: OrderOutSerializer(many=True)},
+    )
     def get(self, request, uuid, action):
         try:
             order = Order.objects.get(
@@ -52,6 +55,9 @@ class OrderByActionView(APIView):
 class GetOrderByActionView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(
+        responses={200: OrderOutSerializer(many=True)},
+    )
     def get(self, request, action):
         if action == "pending":
             order = Order.objects.filter(
