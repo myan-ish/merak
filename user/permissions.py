@@ -17,13 +17,28 @@ class UserIsOwner(BasePermission):
 
     def has_permission(self, request, view):
         list_of_owners = Organization.objects.values_list("owner__id", flat=True)
-        if request.user.id in list_of_owners:
-            return True
-        else:
-            return False
+        return request.user.id in list_of_owners
 
     def has_object_permission(self, request, view, obj):
         try:
             return request.user.id == obj.user.organization.owner.id
         except AttributeError:
             return request.user.organization == obj.organization
+
+class UserIsEditor(BasePermission):
+    message = "You need to be the editor of the organization to access this resource."
+
+    def has_permission(self, request, view):
+        return request.user.groups.filter(name='Editor').exists()
+
+    def has_object_permission(self, request, view, obj):
+        return request.user.organization == obj.organization
+
+class UserIsStaff(BasePermission):
+    message = "You need to be a staff member to access this resource."
+
+    def has_permission(self, request, view):
+        return request.user.is_staff
+
+    def has_object_permission(self, request, view, obj):
+        return request.user.is_staff and request.user.organization == obj.organization
