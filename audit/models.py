@@ -32,15 +32,16 @@ class Expense(models.Model):
         return self.name
 
 class EntryTypeEnum(models.TextChoices):
-    SALES_INVOICE = "SI", "Sales Invoice"
-    SALES_RETURN = "SR", "Sales Return"
-    PURCHASE_INVOICE = "PI", "Purchase Invoice"
-    PURCHASE_RETURN = "PR", "Purchase Return"
-    RECEIPT_VOUCHER = "RV", "Receipt Voucher"
-    PAYMENT_VOUCHER = "PV", "Payment Voucher"
-    JOURNAL_VOUCHER = "JV", "Journal Voucher"
+    SALES_INVOICE = "SI", "Sales Invoice" # Debit
+    SALES_RETURN = "SR", "Sales Return" # Credit
+    PURCHASE_INVOICE = "PI", "Purchase Invoice" # Credit
+    PURCHASE_RETURN = "PR", "Purchase Return" # Debit
+    RECEIPT_VOUCHER = "RV", "Receipt Voucher" # Credit
+    PAYMENT_VOUCHER = "PV", "Payment Voucher" # Debit
+    JOURNAL_VOUCHER = "JV", "Journal Voucher" # Debit/Credit
 
 class Entry(models.Model):
+    # TODO: Add products and list of products
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     date = models.DateField(auto_now=True)
@@ -55,20 +56,21 @@ class Entry(models.Model):
         ordering = ["-date"]
 
 class LedgerTypeEnum(models.TextChoices):
-    CAPITAL = "CAPITAL", "Capital"
-    FIXED_ASSET = "FIXED_ASSET", "Fixed Asset"
-    CURRENT_ASSSET = "CURRENT_ASSSET", "Current Asset"
-    LOAN_AND_ADVANCE = "LOAN_AND_ADVANCE", "Loan and Advance"
-    CASH_AND_BANK = "CASH_AND_BANK", "Cash and Bank"
-    INCOME = "INCOME", "Income"
-    LIABILITY = "LIABILITY", "Liability"
-    EXPENSE = "EXPENSE", "Expense"
-    CUSTOMER = "CUSTOMER", "Customer"
-    VENDOR = "VENDOR", "Vendor"
-    CUSTOMER_AND_VENDOR = "CUSTOMER_AND_VENDOR", "Customer and Vendor"
+    CAPITAL = "CAPITAL", "Capital" #Credit
+    FIXED_ASSET = "FIXED_ASSET", "Fixed Asset" #Debit
+    CURRENT_ASSSET = "CURRENT_ASSSET", "Current Asset" #Debit
+    LOAN_AND_ADVANCE = "LOAN_AND_ADVANCE", "Loan and Advance" #Credit
+    CASH_AND_BANK = "CASH_AND_BANK", "Cash and Bank" #Credit
+    INCOME = "INCOME", "Income" #Debit
+    LIABILITY = "LIABILITY", "Liability" #Credit
+    EXPENSE = "EXPENSE", "Expense" #Debit
+    CUSTOMER = "CUSTOMER", "Customer" #Debit
+    VENDOR = "VENDOR", "Vendor" #Credit
+    CUSTOMER_AND_VENDOR = "CUSTOMER_AND_VENDOR", "Customer and Vendor" # Debit/Credit
 
 
 class Ledger(models.Model):
+    # TODO: Separate ledger by date so separate fiscal years can have different ledgers
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     name = models.CharField(max_length=255)
     type = models.CharField(
@@ -87,7 +89,7 @@ class Ledger(models.Model):
     )
 
     entries = models.ManyToManyField(
-        Entry)
+        Entry, blank=True)
     
     credit = models.DecimalField(decimal_places=2, default=0, max_digits=15)
     debit = models.DecimalField(decimal_places=2, default=0,max_digits=15)
@@ -95,9 +97,14 @@ class Ledger(models.Model):
 
     def __str__(self):
         return self.name
+
+    def is_credit(self, type):
+        if type in [EntryTypeEnum.SALES_INVOICE, EntryTypeEnum.PURCHASE_RETURN, EntryTypeEnum.RECEIPT_VOUCHER, EntryTypeEnum.JOURNAL_VOUCHER]:
+            return False
+        return True
     
     def make_transaction(self, amount, is_credit, type):
-        self.closing_balance = self.closing_balance + amount if is_credit else self.closing_balance - amount
+        self.closing_balance = self.closing_balance + amount if not is_credit else self.closing_balance - amount
         self.save()
         entry = Entry.objects.create(
             amount=amount,

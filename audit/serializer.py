@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from audit.models import Expense, ExpenseCategory
-from inventory.views import UserOutSerializer
+from inventory.serializers.user import UserOutSerializer
 from user.models import User
 
 
